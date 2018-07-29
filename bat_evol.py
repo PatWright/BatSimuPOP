@@ -74,7 +74,59 @@ def demoModel(gen, pop):
     return sz
 
     
-    
+def exportPop(pop):
+    ''' Export in genepop format with sex and age'''
+    with open(f'pop_{pop.dvars().gen}.txt', 'w') as output:
+        #
+        # first line: title
+        #
+        output.write(f'bat population at generation {pop.dvars().gen}\n')
+        #
+        # second line: allele names
+        #
+        names = pop.lociNames()
+        if names:
+            # if names are specified
+            output.write(', '.join(names) + ', sex, age\n')
+        else:
+            names = []
+            for ch in range(pop.numChrom()):
+                for loc in range(pop.numLoci(ch)):
+                    names.append('ch%d-loc%d' % (ch + 1, loc + 1))
+            output.write(', '.join(names) + ', sex, age\n')
+        # sex and age as special names
+        # 
+        # output genotype
+        #
+        # progress bar might be wrong with subPops parameter...
+        alleleWidth = 3 if max(pop.genotype()) >= 99 else 2
+        format_string = '%%0%dd%%0%dd' % (alleleWidth, alleleWidth)
+        count = 0
+        numLoci = pop.totNumLoci()
+        for vsp in [0, 1]:
+            # 
+            # for each subpopulation, output pop
+            #
+            output.write('POP\n')
+            # the name might contain space etc
+            name = ''.join([x for x in pop.subPopName(vsp) if x.isalnum()])
+            if not name:
+                name = 'SubPop%d' % (vsp if type(vsp) == type(0) else vsp[0])
+            #
+            for idx, ind in enumerate(pop.individuals(vsp)):
+                #
+                # label
+                #
+                output.write('%s-%d, ' % (name, idx + 1))
+                #
+                # genotype
+                #
+                geno = ind.genotype()
+                output.write(' '.join([format_string % (geno[x], geno[numLoci + x]) for x in range(numLoci)]) +
+                        f'\t{"M" if ind.sex() == sim.MALE else "F"}\t{ind.age}\n')
+        return True
+
+
 
 pop1 = pop.clone()
 pop1.evolve(
@@ -97,7 +149,7 @@ pop1.evolve(
     postOps=[
         sim.Stat(popSize=True),
         sim.PyEval(r'f"{gen} {subPopSize}\n"'),
-        sim.utils.Exporter(format='GENEPOP', step=10, output='!f"{gen}.pop"', gui='batch')
+        sim.PyOperator(func=exportPop, step=10),
     ],
     gen=200
 )
