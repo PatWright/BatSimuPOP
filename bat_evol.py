@@ -87,13 +87,13 @@ def exportPop(pop):
         names = pop.lociNames()
         if names:
             # if names are specified
-            output.write(', '.join(names) + ', sex, age\n')
+            output.write(', '.join(names) + ', sex, age, fitness\n')
         else:
             names = []
             for ch in range(pop.numChrom()):
                 for loc in range(pop.numLoci(ch)):
                     names.append('ch%d-loc%d' % (ch + 1, loc + 1))
-            output.write(', '.join(names) + ', sex, age\n')
+            output.write(', '.join(names) + ', sex, age, fitness\n')
         # sex and age as special names
         # 
         # output genotype
@@ -123,16 +123,18 @@ def exportPop(pop):
                 #
                 geno = ind.genotype()
                 output.write(' '.join([format_string % (geno[x], geno[numLoci + x]) for x in range(numLoci)]) +
-                        f'\t{"M" if ind.sex() == sim.MALE else "F"}\t{ind.age}\n')
+                        f'\t{"M" if ind.sex() == sim.MALE else "F"}\t{ind.age}\t{ind.fitness}\n')
         return True
 
 
 
 pop1 = pop.clone()
+pop1.addInfoFields('fitness')
 pop1.evolve(
     preOps=[
         migr,
         sim.InfoExec('age += 1'),
+        sim.InfoExec('fitness = (50 - ind.age)/50', exposeInd='ind'),
     ],
     matingScheme=sim.HeteroMating([
         # only adult individuals with age >=3 will mate and produce
